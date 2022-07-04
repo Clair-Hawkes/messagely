@@ -16,12 +16,24 @@ class User {
   static async register({ username, password, first_name, last_name, phone }) {
 
     const hashedPassword = await bcrypt.hash(
-      password, BCRYPT_WORK_FACTOR);
+      password,
+      BCRYPT_WORK_FACTOR
+    );
+
+    // TODO: Validate inputs?
     const result = await db.query(
-      `INSERT INTO users (username, password,first_name,last_name,phone,join_at,last_login_at)
+      `INSERT INTO users (username,
+                          password,
+                          first_name,
+                          last_name,
+                          phone,
+                          join_at,
+                          last_login_at)
            VALUES
-             ($1, $2,$3,$4,$5,NOW()::timestamp,NOW()::timestamp)
-           RETURNING username, password,first_name,last_name,phone`, [username, hashedPassword, first_name, last_name, phone]);
+              ($1, $2, $3, $4, $5, NOW()::timestamp, NOW()::timestamp)
+           RETURNING username, password,first_name,last_name,phone`,
+      [username, hashedPassword, first_name, last_name, phone]);
+
     const user = result.rows[0];
 
     // return new User(user);
@@ -56,10 +68,8 @@ class User {
            WHERE username = $1
            RETURNING last_login_at`, [username]);
     const user = result.rows[0];
-    console.log(user);
 
     if (!user) throw new NotFoundError(`No such user: ${username}`);
-    // TODO: Needed? return user.last_login_at;
   }
 
   /** All: basic info on all users:
@@ -67,7 +77,10 @@ class User {
 
   static async all() {
     const result = await db.query(
-      "SELECT username, first_name, last_name FROM users"
+      `SELECT username,
+              first_name,
+              last_name
+      FROM users`
     );
     return result.rows;
   }
@@ -83,9 +96,14 @@ class User {
 
   static async get(username) {
     const result = await db.query(
-      `SELECT username, first_name, last_name,phone,join_at,last_login_at
+      `SELECT username,
+              first_name,
+              last_name,phone,
+              join_at,
+              last_login_at
          FROM users
-         WHERE username = $1`, [username]);
+         WHERE username = $1`,
+      [username]);
     const user = result.rows[0];
 
     if (!user) throw new NotFoundError(`No such user: ${username}`);
@@ -101,16 +119,24 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  // [{msg},{msg},...]
-  // [{id:1,first_name:user,...}]
-
   static async messagesFrom(username) {
     const result = await db.query(
-      `SELECT id, username, first_name, last_name, phone, body, sent_at, read_at
-         FROM messages JOIN users ON messages.to_username = users.username
-         WHERE from_username = $1`, [username]);
+      `SELECT id,
+              username,
+              first_name,
+              last_name,
+              phone,
+              body,
+              sent_at,
+              read_at
+         FROM messages
+         JOIN users ON messages.to_username = users.username
+         WHERE from_username = $1`,
+      [username]);
 
-    if (result.rows.length === 0) throw new NotFoundError(`No messages from: ${username}`);
+    if (result.rows.length === 0) {
+      throw new NotFoundError(`No messages from: ${username}`);
+    }
 
     // TODO: Question: Object shorthand works?
     const messages = result.rows.map(
@@ -144,12 +170,22 @@ class User {
   static async messagesTo(username) {
 
     const result = await db.query(
-      `SELECT id, username, first_name, last_name, phone, body, sent_at, read_at
-         FROM messages JOIN users ON messages.from_username = users.username
-         WHERE to_username = $1`, [username]
-    );
+      `SELECT id,
+              username,
+              first_name,
+              last_name,
+              phone,
+              body,
+              sent_at,
+              read_at
+         FROM messages
+         JOIN users ON messages.from_username = users.username
+         WHERE to_username = $1`,
+      [username]);
 
-    if (result.rows.length === 0) throw new NotFoundError(`No messages to: ${username}`);
+    if (result.rows.length === 0) {
+      throw new NotFoundError(`No messages to: ${username}`);
+    }
 
     const messages = result.rows.map(
       msg => {
