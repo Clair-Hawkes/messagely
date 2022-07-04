@@ -47,12 +47,26 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
+    const result = await db.query(
+      `UPDATE users
+         SET last_login_at = NOW()::timestamp
+           WHERE username = $1
+           RETURNING last_login_at`, [username]);
+    const user = result.rows[0];
+    console.log(user);
+
+    if (!user) throw new NotFoundError(`No such user: ${username}`);
+    // TODO: Needed? return user.last_login_at;
   }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name}, ...] */
 
   static async all() {
+    const result = await db.query(
+      "SELECT username, first_name, last_name FROM users"
+    );
+    return result.rows;
   }
 
   /** Get: get user by username
@@ -65,6 +79,15 @@ class User {
    *          last_login_at } */
 
   static async get(username) {
+    const result = await db.query(
+      `SELECT username, first_name, last_name,phone,join_at,last_login_at
+         FROM users
+         WHERE username = $1`, [username]);
+    const user = result.rows[0];
+
+    if (!user) throw new NotFoundError(`No such user: ${username}`);
+    return result.rows[0];
+
   }
 
   /** Return messages from this user.
