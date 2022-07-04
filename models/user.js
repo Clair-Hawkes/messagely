@@ -99,6 +99,14 @@ class User {
    */
 
   static async messagesFrom(username) {
+    const result = await db.query(
+      `SELECT id, username, first_name, last_name, phone, body, sent_at, read_at
+         FROM messages JOIN users ON messages.to_username = users.username
+         WHERE from_username = $1`, [username]);
+    const messages = result.rows;
+
+    if (messages.length === 0) throw new NotFoundError(`No messages from: ${username}`);
+    return messages;
   }
 
   /** Return messages to this user.
