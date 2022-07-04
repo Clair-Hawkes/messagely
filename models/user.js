@@ -9,6 +9,16 @@ class User {
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
+
+    const result = await db.query(
+        `INSERT INTO users (username, password,first_name,last_name,phone,join_at)
+           VALUES
+             ($1, $2,$3,$4,$5,NOW()::timestamp)
+           RETURNING username, password,first_name,last_name,phone`, [username, password,first_name,last_name,phone]);
+    const user = result.rows[0];
+
+    return new User(user);
+
   }
 
   /** Authenticate: is username/password valid? Returns boolean. */
