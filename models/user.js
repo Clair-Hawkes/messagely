@@ -1,7 +1,9 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const { BCRYPT_WORK_FACTOR } = require('./config.js');
+const { BCRYPT_WORK_FACTOR } = require('../config.js');
+const db = require("../db");
+
 
 /** User of the site. */
 
@@ -16,13 +18,14 @@ class User {
     const hashedPassword = await bcrypt.hash(
       password, BCRYPT_WORK_FACTOR);
     const result = await db.query(
-      `INSERT INTO users (username, password,first_name,last_name,phone,join_at)
+      `INSERT INTO users (username, password,first_name,last_name,phone,join_at,last_login_at)
            VALUES
-             ($1, $2,$3,$4,$5,NOW()::timestamp)
+             ($1, $2,$3,$4,$5,NOW()::timestamp,NOW()::timestamp)
            RETURNING username, password,first_name,last_name,phone`, [username, hashedPassword, first_name, last_name, phone]);
     const user = result.rows[0];
 
-    return new User(user);
+    // return new User(user);
+    return user;
 
   }
 
@@ -98,14 +101,35 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
+  // [{msg},{msg},...]
+  // [{id:1,first_name:user,...}]
+
   static async messagesFrom(username) {
     const result = await db.query(
       `SELECT id, username, first_name, last_name, phone, body, sent_at, read_at
          FROM messages JOIN users ON messages.to_username = users.username
          WHERE from_username = $1`, [username]);
-    const messages = result.rows;
 
-    if (messages.length === 0) throw new NotFoundError(`No messages from: ${username}`);
+    if (result.rows.length === 0) throw new NotFoundError(`No messages from: ${username}`);
+
+    // TODO: Question: Object shorthand works?
+    const messages = result.rows.map(
+      msg => {
+        return {
+          id: msg.id,
+          to_user: {
+            username: msg.username,
+            first_name: msg.first_name,
+            last_name: msg.last_name,
+            phone: msg.phone
+          },
+          body: msg.body,
+          sent_at: msg.sent_at,
+          read_at: msg.read_at,
+        };
+      }
+    );
+
     return messages;
   }
 
@@ -114,10 +138,36 @@ class User {
    * [{id, from_user, body, sent_at, read_at}]
    *
    * where from_user is
-   *   {id, first_name, last_name, phone}
+   *   {username, first_name, last_name, phone}
    */
 
   static async messagesTo(username) {
+
+    const result = await db.query(
+      `SELECT id, username, first_name, last_name, phone, body, sent_at, read_at
+         FROM messages JOIN users ON messages.from_username = users.username
+         WHERE to_username = $1`, [username]
+    );
+
+    if (result.rows.length === 0) throw new NotFoundError(`No messages to: ${username}`);
+
+    const messages = result.rows.map(
+      msg => {
+        return {
+          id: msg.id,
+          from_user: {
+            username: msg.username,
+            first_name: msg.first_name,
+            last_name: msg.last_name,
+            phone: msg.phone
+          },
+          body: msg.body,
+          sent_at: msg.sent_at,
+          read_at: msg.read_at,
+        };
+      }
+    );
+    return messages;
   }
 }
 
