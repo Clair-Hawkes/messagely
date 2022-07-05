@@ -118,7 +118,7 @@ class User {
    * where to_user is
    *   {username, first_name, last_name, phone}
    */
-
+  // TODO: Order by statement
   static async messagesFrom(username) {
     const result = await db.query(
       `SELECT id,
@@ -166,6 +166,7 @@ class User {
    * where from_user is
    *   {username, first_name, last_name, phone}
    */
+    // TODO: Order by statement
 
   static async messagesTo(username) {
 
